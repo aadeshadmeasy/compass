@@ -8,4 +8,5 @@ __pycache__/
 data/*secret*
 data/*ledger*
 data/routing_trajectories*.jsonl
+!data/routing_trajectories_sample.jsonl
 data/ranker_rows*.jsonl

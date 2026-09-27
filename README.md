@@ -13,7 +13,7 @@ It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates yo
 | **Current weights stage** | **`stage-a-torch-v4`** (clean + marketplace; R@1≈0.857) |
 | Serving | SageMaker serverless endpoint `jev-router-ranker-v1` |
 | Catalog (private/box) | ~32,000 enriched tools |
-| Sample in this repo | `data/tool_catalog_sample.jsonl` (~400 tools) |
+| Sample in this repo | `data/tool_catalog_sample.jsonl` (**~10,000** tools, stratified across category/server from the ~32k training catalog; full train data stays on SageMaker S3). Also `data/routing_trajectories_sample.jsonl` (~2k public trajectories). |
 | **GPU train** | **Deferred until quota** — prefer `ml.g4dn.xlarge` training (case `179054010300961` / request `ecee8866…`). Approved already: `ml.g5.xlarge`, `ml.g5.2xlarge`, `ml.g4dn.2xlarge`. Big GPU `stage-a-torch-v5` starts **tomorrow after approval**. Overnight GPU jobs stopped. |
 | v5 data | Long-utterance Sarvam mint + dynamic candidates (under 50M token hard cap) |
 
@@ -74,7 +74,7 @@ v5 GPU train is pending quota (see Status table).
 demo/           try-me Flask UI
 serving/        infer_torch HashBag load + rank
 scripts/        train / mint / quality gate (sanitized)
-data/           sample catalog subset (public)
+data/           ~10k stratified catalog sample + ~2k trajectory sample (public; full train on S3)
 docs/           architecture + training IO
 manifests/      stage READMEs (large weights via S3 / Releases)
 ```
