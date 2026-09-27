@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pt
+*.tar.gz
+.env
+*.env
+.DS_Store
+data/*secret*
+data/*ledger*
+data/routing_trajectories*.jsonl
+data/ranker_rows*.jsonl
