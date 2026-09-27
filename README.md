@@ -6,6 +6,17 @@ It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates yo
 
 > Public GitHub: [aadeshadmeasy/compass](https://github.com/aadeshadmeasy/compass)
 
+## Status (2026-09-27 IST)
+
+| Item | State |
+|------|--------|
+| **Current weights stage** | **`stage-a-torch-v4`** (clean + marketplace; R@1≈0.857) |
+| Serving | SageMaker serverless endpoint `jev-router-ranker-v1` |
+| Catalog (private/box) | ~32,000 enriched tools |
+| Sample in this repo | `data/tool_catalog_sample.jsonl` (~400 tools) |
+| **GPU train** | **Deferred until quota** — prefer `ml.g4dn.xlarge` training (case `179054010300961` / request `ecee8866…`). Approved already: `ml.g5.xlarge`, `ml.g5.2xlarge`, `ml.g4dn.2xlarge`. Big GPU `stage-a-torch-v5` starts **tomorrow after approval**. Overnight GPU jobs stopped. |
+| v5 data | Long-utterance Sarvam mint + dynamic candidates (under 50M token hard cap) |
+
 ## Why
 
 MCP workspaces easily accumulate 100–1000+ tools across Gmail, Zoho Mail, Instagram, Slack, GA4, Shopify, Salesforce, Buffer/Ayrshare, etc. Asking a big LLM to pick every turn is slow and conflates **mail** with **social** (e.g. “post reel” should never rank `zoho_send_mail`).
@@ -48,6 +59,15 @@ utterance → (optional lexical retrieve) → candidates[]
 
 Training uses **dynamic candidate pools** per example (gold + hard negatives from other families), never a fixed global tool list.
 
+## Weights
+
+`*.pt` / `*.tar.gz` are gitignored. Current serving weights:
+
+- Stage: **`stage-a-torch-v4`** — see [manifests/stage-a-torch-v4/README.md](manifests/stage-a-torch-v4/README.md)
+- S3: `s3://amazon-sagemaker-530448593594-us-east-1-bewonmqz0j9mp3/jev-router/models/stage-a-torch-v4/model.tar.gz`
+
+v5 GPU train is pending quota (see Status table).
+
 ## Repo layout
 
 ```
@@ -56,7 +76,7 @@ serving/        infer_torch HashBag load + rank
 scripts/        train / mint / quality gate (sanitized)
 data/           sample catalog subset (public)
 docs/           architecture + training IO
-manifests/      placeholder for checkpoints (large weights via Releases/S3)
+manifests/      stage READMEs (large weights via S3 / Releases)
 ```
 
 ## License
@@ -66,10 +86,3 @@ Apache-2.0 — see [LICENSE](LICENSE).
 ## Credits
 
 Built for Admeasy Ai routing research. Brand: **Compass**. Internal codename was “Jev”.
-
-## Status (2026-09-28)
-
-- Catalog path: ~32k tools. This repo ships a **sample** catalog only (`data/tool_catalog_sample.jsonl`), not the full ~32k list.
-- Sarvam mint is **in progress** under a 50M token cap.
-- Live endpoint: `jev-router-ranker-v1` on **v4** (stage-a-torch-v4). v5 is not deployed.
-- GPU SageMaker train is **deferred** until quota case `179054010300961` is approved (expected tomorrow).
