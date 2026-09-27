@@ -66,3 +66,10 @@ Apache-2.0 — see [LICENSE](LICENSE).
 ## Credits
 
 Built for Admeasy Ai routing research. Brand: **Compass**. Internal codename was “Jev”.
+
+## Status (2026-09-28)
+
+- Catalog path: ~32k tools. This repo ships a **sample** catalog only (`data/tool_catalog_sample.jsonl`), not the full ~32k list.
+- Sarvam mint is **in progress** under a 50M token cap.
+- Live endpoint: `jev-router-ranker-v1` on **v4** (stage-a-torch-v4). v5 is not deployed.
+- GPU SageMaker train is **deferred** until quota case `179054010300961` is approved (expected tomorrow).
