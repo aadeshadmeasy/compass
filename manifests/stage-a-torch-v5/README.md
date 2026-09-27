@@ -1,9 +1,15 @@
-# stage-a-torch-v5 (in progress)
+# stage-a-torch-v5 (box interim)
 
-**GPU train deferred until quota** for preferred `ml.g4dn.xlarge` training (Service Quotas request `ecee886646f74b26b6e725e723e812b49hRuW34F`, case `179054010300961`, status CASE_OPENED).
+**GPU train deferred until quota** for preferred `ml.g4dn.xlarge` (case `179054010300961` / request `ecee886646f74b26b6e725e723e812b49hRuW34F`).
 
-Also APPROVED (usable tomorrow for big GPU train): `ml.g5.xlarge`, `ml.g5.2xlarge`, `ml.g4dn.2xlarge`.
+## Box interim metrics (not yet serving)
 
-Overnight GPU jobs were **stopped** per plan; big GPU train starts after g4dn.xlarge approval (or on approved g5/g4dn.2xlarge tomorrow).
+| Metric | Value |
+|--------|-------|
+| val AUC | 0.9582 |
+| val recall@1 | 0.8493 |
+| val recall@3 | 0.9483 |
 
-Box train may produce an interim checkpoint; weights still gitignored.
+Serving remains **stage-a-torch-v4** (R@1≈0.857) until GPU v5 improves.
+
+S3 interim: `s3://amazon-sagemaker-530448593594-us-east-1-bewonmqz0j9mp3/jev-router/models/stage-a-torch-v5/model.tar.gz`
