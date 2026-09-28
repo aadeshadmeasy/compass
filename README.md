@@ -31,6 +31,9 @@ Compass:
 ## Quickstart
 
 ```bash
+# Install Python 3 if needed (Homebrew)
+brew install python
+
 python -m venv .venv && source .venv/bin/activate
 pip install torch flask  # + boto3 only if using SageMaker endpoint
 
