@@ -17,6 +17,24 @@ It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates yo
 | **GPU train** | **Deferred until quota** — prefer `ml.g4dn.xlarge` training (case `179054010300961` / request `ecee8866…`). Approved already: `ml.g5.xlarge`, `ml.g5.2xlarge`, `ml.g4dn.2xlarge`. Big GPU `stage-a-torch-v5` starts **tomorrow after approval**. Overnight GPU jobs stopped. |
 | v5 data | Long-utterance Sarvam mint + dynamic candidates (under 50M token hard cap) |
 
+## Live demo
+
+| Surface | URL |
+|---------|-----|
+| **Vercel (this repo `site/`)** | Deployed after push — see GitHub / Vercel dashboard |
+| **AWS Lambda try-me (live ranking)** | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws |
+| Health | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health |
+| Rank API | `POST` https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank |
+
+The static UI under [`site/`](site/) proxies `/api/rank` and `/health` to that Lambda Function URL (open CORS; temporary public try-me on stage-a-torch-v4). No AWS keys in this repo.
+
+```bash
+curl -sS https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health
+curl -sS -X POST https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank \
+  -H 'Content-Type: application/json' \
+  -d '{"utterance":"post reel","department":"marketing","top_k":5}'
+```
+
 ## Why
 
 MCP workspaces easily accumulate 100–1000+ tools across Gmail, Zoho Mail, Instagram, Slack, GA4, Shopify, Salesforce, Buffer/Ayrshare, etc. Asking a big LLM to pick every turn is slow and conflates **mail** with **social** (e.g. “post reel” should never rank `zoho_send_mail`).

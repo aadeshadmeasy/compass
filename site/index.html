@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="description" content="Compass — fast HashBag MCP tool ranker. Plain English → ranked tools."/>
+<title>Compass — MCP tool ranker demo</title>
+<style>
+  :root { --bg:#0b1220; --card:#141e33; --fg:#e8eefc; --muted:#9bb0d0; --acc:#5b8cff; --ok:#3dd68c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, sans-serif;
+         background: radial-gradient(1200px 600px at 10% -10%, #1a2a55, var(--bg)); color: var(--fg); min-height:100vh; }
+  main { max-width: 860px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 1.55rem; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin-bottom: 18px; line-height: 1.45; }
+  .card { background: var(--card); border: 1px solid #243353; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  label { display:block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  textarea, input { width:100%; background:#0d1628; color:var(--fg); border:1px solid #2a3c63;
+    border-radius:10px; padding:10px 12px; font-size:1rem; }
+  textarea { min-height: 88px; resize: vertical; }
+  .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px; }
+  button { margin-top: 12px; background: var(--acc); color:white; border:0; border-radius:10px;
+           padding: 11px 16px; font-weight:600; font-size:1rem; cursor:pointer; width:100%; }
+  button:disabled { opacity:0.6; cursor:wait; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .chip { background:#1a2744; border:1px solid #2e426e; color:var(--fg); border-radius:999px;
+          padding:6px 12px; font-size:0.8rem; cursor:pointer; }
+  table { width:100%; border-collapse: collapse; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid #243353; font-size:0.95rem; }
+  th { color:var(--muted); font-weight:500; }
+  .score { font-variant-numeric: tabular-nums; color: var(--ok); }
+  .meta { color:var(--muted); font-size:0.85rem; margin-top:10px; line-height:1.4; }
+  .warn { color:#ffd166; }
+  code { background:#0d1628; padding:1px 6px; border-radius:6px; }
+  .badge { display:inline-block; background:#243353; color:#9bb0d0; border-radius:999px; padding:2px 10px; font-size:0.75rem; margin-left:8px; }
+  a { color: var(--acc); }
+  footer { margin-top: 18px; color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Compass <span class="badge">live demo · HashBag v4</span></h1>
+  <p class="sub">Plain English → ranked MCP tools. This static site proxies ranking to the public AWS Lambda try-me
+  (SageMaker endpoint, stage-a-torch-v4). Open source:
+  <a href="https://github.com/aadeshadmeasy/compass" target="_blank" rel="noopener">aadeshadmeasy/compass</a>.</p>
+  <div class="card">
+    <label for="utt">Prompt</label>
+    <textarea id="utt" placeholder="post an Instagram reel about Diwali"></textarea>
+    <div class="row">
+      <div>
+        <label for="dept">Department (optional)</label>
+        <input id="dept" placeholder="crm / marketing / sales"/>
+      </div>
+      <div>
+        <label for="pin">Pin / server slug (optional)</label>
+        <input id="pin" placeholder="e.g. google-workspace-mcp"/>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip" data-u="Send an email with Gmail to the client about the proposal" data-d="crm">Gmail proposal</span>
+      <span class="chip" data-u="Show me last 28 days GA4 summary please" data-d="marketing">GA4 summary</span>
+      <span class="chip" data-u="post reel" data-d="marketing">post reel</span>
+      <span class="chip" data-u="dm reply" data-d="marketing">dm reply</span>
+      <span class="chip" data-u="check Instagram inbox DMs" data-d="marketing">IG DMs</span>
+      <span class="chip" data-u="thanks!" data-d="">thanks (no_tool)</span>
+    </div>
+    <button id="go">Rank tools</button>
+  </div>
+  <div class="card" id="out"><div class="meta">Results appear here.</div></div>
+  <footer>
+    API: same-origin <code>/api/rank</code> → AWS Lambda Function URL<br/>
+    Direct Lambda: <a id="direct" href="https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/" target="_blank" rel="noopener">open try-me</a>
+    · <a href="https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health" target="_blank" rel="noopener">/health</a>
+  </footer>
+</main>
+<script>
+const AWS_DEMO = 'https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws';
+const utt = document.getElementById('utt');
+const dept = document.getElementById('dept');
+const pin = document.getElementById('pin');
+const go = document.getElementById('go');
+const out = document.getElementById('out');
+// Prefer same-origin proxy (/api/rank via vercel.json rewrite); fall back to direct Lambda (CORS open).
+const API_CANDIDATES = ['/api/rank', AWS_DEMO + '/api/rank'];
+document.querySelectorAll('.chip').forEach(c => c.onclick = () => {
+  utt.value = c.dataset.u; dept.value = c.dataset.d || '';
+});
+async function postRank(url, body) {
+  const r = await fetch(url, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const j = await r.json().catch(() => ({ error: 'non-JSON response ' + r.status }));
+  if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+go.onclick = async () => {
+  go.disabled = true; out.innerHTML = '<div class="meta">Ranking… (cold start may take a few seconds)</div>';
+  const body = { utterance: utt.value, department: dept.value || null, pin: pin.value || null, top_k: 5 };
+  let j = null; let used = null; let lastErr = null;
+  for (const url of API_CANDIDATES) {
+    try { j = await postRank(url, body); used = url; break; }
+    catch (e) { lastErr = e; }
+  }
+  try {
+    if (!j) throw lastErr || new Error('all endpoints failed');
+    if (j.error) { out.innerHTML = `<div class="meta warn">${j.error}</div>`; return; }
+    const rows = (j.ranked||[]).map((x,i)=>`<tr><td>${i+1}</td><td><code>${x.tool}</code>${x.needs_approval?' <span class="warn">approval</span>':''}${x.meta?' <span class="warn">meta</span>':''}</td><td class="score">${(x.score*100).toFixed(2)}%</td></tr>`).join('');
+    out.innerHTML = `
+      <table><thead><tr><th>#</th><th>Tool</th><th>Score</th></tr></thead><tbody>${rows||'<tr><td colspan=3>none</td></tr>'}</tbody></table>
+      <div class="meta">
+        utterance: <b>${(j.utterance||'').replace(/</g,'&lt;')}</b><br/>
+        via: <code>${used}</code> · endpoint: <code>${j.endpoint||''}</code>
+        · candidates: ${j.timing?.n_candidates ?? ''}
+        · e2e: <b>${j.timing?.rtt_ms ?? j.latency_ms?.total ?? '?'} ms</b>
+        ${j.no_tool?' · <span class="warn">no_tool hint</span>':''}
+        ${j.meta_first?' · <span class="warn">meta_first</span>':''}<br/>
+        policy: ${j.policy_version||''}
+        ${j.timing?.note?`<br/><span class="warn">${j.timing.note}</span>`:''}
+      </div>`;
+  } catch (e) {
+    out.innerHTML = `<div class="meta warn">${e}</div>`;
+  } finally { go.disabled = false; }
+};
+</script>
+</body>
+</html>
