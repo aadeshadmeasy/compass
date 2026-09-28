@@ -21,7 +21,7 @@ It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates yo
 
 | Surface | URL |
 |---------|-----|
-| **Vercel (this repo `site/`)** | Deployed after push — see GitHub / Vercel dashboard |
+| **Vercel (this repo `site/`)** | https://compass-self-nu.vercel.app |
 | **AWS Lambda try-me (live ranking)** | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws |
 | Health | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health |
 | Rank API | `POST` https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank |
