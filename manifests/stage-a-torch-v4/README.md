@@ -1,6 +1,6 @@
-# stage-a-torch-v4 (current serving weights)
+# stage-a-torch-v4 (historical serving weights)
 
-**Status:** Current production stage on SageMaker serverless endpoint `jev-router-ranker-v1`.
+**Status:** Historical production stage; superseded in production by `stage-a-torch-v10-hardv6-fallback`.
 
 ## Metrics (box train, quality-gated clean rows)
 

@@ -10,6 +10,6 @@
 | val recall@1 | 0.8493 |
 | val recall@3 | 0.9483 |
 
-Serving remains **stage-a-torch-v4** (R@1≈0.857) until GPU v5 improves.
+This interim checkpoint is historical and is not the current serving stage; production now uses **stage-a-torch-v10-hardv6-fallback**.
 
 S3 interim: `s3://amazon-sagemaker-530448593594-us-east-1-bewonmqz0j9mp3/jev-router/models/stage-a-torch-v5/model.tar.gz`

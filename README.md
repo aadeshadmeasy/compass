@@ -6,15 +6,15 @@ It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates yo
 
 > Public GitHub: [aadeshadmeasy/compass](https://github.com/aadeshadmeasy/compass)
 
-## Status (2026-09-27 IST)
+## Status (2026-09-28 IST)
 
 | Item | State |
 |------|--------|
-| **Current weights stage** | **`stage-a-torch-v4`** (clean + marketplace; R@1≈0.857) |
+| **Current weights stage** | **`stage-a-torch-v10-hardv6-fallback`** (600k hard-negative rows; best matched R@1@k8≈0.7183) |
 | Serving | SageMaker serverless endpoint `jev-router-ranker-v1` |
 | Catalog (private/box) | ~32,000 enriched tools |
 | Sample in this repo | `data/tool_catalog_sample.jsonl` (**~10,000** tools, stratified across category/server from the ~32k training catalog; full train data stays on SageMaker S3). Also `data/routing_trajectories_sample.jsonl` (~2k public trajectories). |
-| **GPU train** | **Deferred until quota** — prefer `ml.g4dn.xlarge` training (case `179054010300961` / request `ecee8866…`). Approved already: `ml.g5.xlarge`, `ml.g5.2xlarge`, `ml.g4dn.2xlarge`. Big GPU `stage-a-torch-v5` starts **tomorrow after approval**. Overnight GPU jobs stopped. |
+| **GPU train** | A separate deep training job remains active; it is not part of the deployed checkpoint. |
 | v5 data | Long-utterance Sarvam mint + dynamic candidates (under 50M token hard cap) |
 
 ## Live demo
@@ -26,7 +26,7 @@ It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates yo
 | Health | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health |
 | Rank API | `POST` https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank |
 
-The static UI under [`site/`](site/) proxies `/api/rank` and `/health` to that Lambda Function URL (open CORS; temporary public try-me on stage-a-torch-v4). No AWS keys in this repo.
+The static UI under [`site/`](site/) proxies `/api/rank` and `/health` to that Lambda Function URL (open CORS; temporary public try-me on stage-a-torch-v10-hardv6-fallback). No AWS keys in this repo.
 
 ```bash
 curl -sS https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health
@@ -84,10 +84,9 @@ Training uses **dynamic candidate pools** per example (gold + hard negatives fro
 
 `*.pt` / `*.tar.gz` are gitignored. Current serving weights:
 
-- Stage: **`stage-a-torch-v4`** — see [manifests/stage-a-torch-v4/README.md](manifests/stage-a-torch-v4/README.md)
-- S3: `s3://amazon-sagemaker-530448593594-us-east-1-bewonmqz0j9mp3/jev-router/models/stage-a-torch-v4/model.tar.gz`
-
-v5 GPU train is pending quota (see Status table).
+- Stage: **`stage-a-torch-v10-hardv6-fallback`** — see [manifests/stage-a-torch-v10-hardv6-fallback/README.md](manifests/stage-a-torch-v10-hardv6-fallback/README.md)
+- S3: `s3://amazon-sagemaker-530448593594-us-east-1-bewonmqz0j9mp3/jev-router/models/stage-a-torch-v10-hardv6-fallback/model.tar.gz`
+- Live SageMaker endpoint: `jev-router-ranker-v1` (serverless, config `jev-router-ranker-v10-srvless-cfg-202609281608`)
 
 ## Repo layout
 
