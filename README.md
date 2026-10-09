@@ -1,108 +1,188 @@
 # Compass
 
-**Compass** is a tiny, fast **MCP tool ranker**: plain English → ranked tools from a dynamic candidate set (tens to thousands of MCP tools).
+**Fast, lightweight ranking for dynamic MCP tool routing.**
 
-It is **not** an LLM agent loop. Compass learns to *rank* whatever candidates you provide (HashBag), so routing stays sub-millisecond locally and cheap on serverless.
+Plain-language intent → ranked tools.
 
-> Public GitHub: [aadeshadmeasy/compass](https://github.com/aadeshadmeasy/compass)
+Compass is a compact MCP tool ranker that selects relevant tools from dynamic candidate sets of tens to thousands of tools. It uses a learned HashBag scoring model to keep routing local, fast, and inexpensive.
 
-## Status (2026-09-28 IST)
+It is **a ranker, not an agent loop.**
 
-| Item | State |
-|------|--------|
-| **Current weights stage** | **`stage-a-torch-v10-hardv6-fallback`** (600k hard-negative rows; best matched R@1@k8≈0.7183) |
-| Serving | SageMaker serverless endpoint `jev-router-ranker-v1` |
-| Catalog (private/box) | ~32,000 enriched tools |
-| Sample in this repo | `data/tool_catalog_sample.jsonl` (**~10,000** tools, stratified across category/server from the ~32k training catalog; full train data stays on SageMaker S3). Also `data/routing_trajectories_sample.jsonl` (~2k public trajectories). |
-| **GPU train** | A separate deep training job remains active; it is not part of the deployed checkpoint. |
-| v5 data | Long-utterance Sarvam mint + dynamic candidates (under 50M token hard cap) |
+[Live Demo](https://compass-self-nu.vercel.app) · [GitHub](https://github.com/aadeshadmeasy/compass) · [Architecture](docs/ARCHITECTURE.md) · [Training I/O](docs/TRAINING_IO.md)
 
-## Live demo
+---
 
-| Surface | URL |
-|---------|-----|
-| **Vercel (this repo `site/`)** | https://compass-self-nu.vercel.app |
-| **AWS Lambda try-me (live ranking)** | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws |
-| Health | https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health |
-| Rank API | `POST` https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank |
+## Overview
 
-The static UI under [`site/`](site/) proxies `/api/rank` and `/health` to that Lambda Function URL (open CORS; temporary public try-me on stage-a-torch-v10-hardv6-fallback). No AWS keys in this repo.
+| | |
+|:--|:--|
+| **Model** | `stage-a-torch-v10-hardv6-fallback` |
+| **Retrieval quality** | R@1@k8 ≈ 0.7183 |
+| **Hard-negative training data** | 600,000 rows |
+| **Enriched tool catalog** | ~32,000 tools |
+| **Serving** | AWS SageMaker Serverless |
+| **Public demo** | AWS Lambda Function URL |
+
+*Status: 28 September 2026. Metrics reflect the current reported checkpoint.*
+
+## Try it
+
+**Live ranking API**
 
 ```bash
-curl -sS https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health
-curl -sS -X POST https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank \
+curl -sS -X POST \
+  https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/api/rank \
   -H 'Content-Type: application/json' \
-  -d '{"utterance":"post reel","department":"marketing","top_k":5}'
+  -d '{
+    "utterance": "post reel",
+    "department": "marketing",
+    "top_k": 5
+  }'
 ```
 
-## Why
+Health check:
 
-MCP workspaces easily accumulate 100–1000+ tools across Gmail, Zoho Mail, Instagram, Slack, GA4, Shopify, Salesforce, Buffer/Ayrshare, etc. Asking a big LLM to pick every turn is slow and conflates **mail** with **social** (e.g. “post reel” should never rank `zoho_send_mail`).
+```bash
+curl -sS \
+  https://2zzcfljnazt226l7ogaku2ek3a0zlkyi.lambda-url.us-east-1.on.aws/health
+```
 
-Compass:
+Explore the [interactive demo](https://compass-self-nu.vercel.app).
 
-1. Takes `state` (utterance, optional department/pin) + `candidates[]`
-2. Scores each candidate with a compact HashBag
-3. Applies light **family conflict** policy (social vs mail) at score time
-4. Returns top-k tools with scores
+The demo is a temporary public endpoint. It uses the `stage-a-torch-v10-hardv6-fallback` checkpoint and does not require AWS credentials in this repository.
+
+## Why Compass
+
+MCP workspaces can accumulate hundreds or thousands of tools across email, social media, analytics, CRM, and commerce platforms.
+
+Routing every request through a large LLM adds latency and cost. It can also confuse tools from unrelated domains.
+
+For example, **“post reel” should rank social publishing tools above email-sending tools.**
+
+Compass addresses this with lightweight scoring and family-conflict handling.
+
+## How it works
+
+```text
+Natural-language request
+          │
+          ▼
+Optional lexical retrieval
+          │
+          ▼
+Dynamic candidate set
+          │
+          ▼
+Learned HashBag scoring
+          │
+          ▼
+Tool-family conflict policy
+          │
+          ▼
+Ranked top-k tools
+```
+
+Each request supplies a state and a candidate set. Compass scores the available candidates and returns the highest-ranked tools.
+
+Training uses dynamic candidate pools containing the correct tool and hard negatives from other tool families, rather than a fixed global tool list.
+
+## Routing examples
+
+| Request | Expected ranking |
+|:--|:--|
+| `post reel` | Instagram, Buffer, Ayrshare |
+| `dm reply` | Instagram, WhatsApp, Slack messaging |
+| `GA4 summary` | GA4 analytics tools |
+| `send email` | Gmail, Zoho Mail, CRM email tools |
+
+The goal is to improve tool selection without introducing an LLM decision loop into every routing request.
 
 ## Quickstart
 
+**Requirements:** Python 3 and a compatible PyTorch installation.
+
 ```bash
-# Install Python 3 if needed (Homebrew)
-brew install python
+python -m venv .venv
+```
 
-python -m venv .venv && source .venv/bin/activate
-pip install torch flask  # + boto3 only if using SageMaker endpoint
+Activate the environment:
 
-# Local demo (loads sample catalog + checkpoint if present)
+```bash
+# macOS / Linux
+source .venv/bin/activate
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
+
+Install the dependencies:
+
+```bash
+pip install torch flask
+```
+
+Add `boto3` only if your setup uses the SageMaker endpoint.
+
+Start the local demo:
+
+```bash
 python demo/compass_demo_app.py
-# open http://127.0.0.1:8765
 ```
 
-Try:
+Open `http://127.0.0.1:8765`.
 
-| Utterance | Expect |
-|-----------|--------|
-| `post reel` | Instagram / Buffer / Ayrshare publish — **not** Zoho/Gmail |
-| `dm reply` | IG / WhatsApp / Slack DM tools — **not** mail send |
-| `GA4 summary` | `ga4_*` analytics |
-| `send email…` | Gmail / Zoho Mail / CRM mail |
+The local demo requires the appropriate sample catalog and checkpoint files to be available.
 
-## Architecture
+## Model & serving
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/TRAINING_IO.md](docs/TRAINING_IO.md).
+| Component | Details |
+|:--|:--|
+| Current checkpoint | `stage-a-torch-v10-hardv6-fallback` |
+| Training data | 600k hard-negative rows |
+| Serving endpoint | `jev-router-ranker-v1` |
+| Serving platform | SageMaker Serverless |
+| Public API | AWS Lambda Function URL |
+| Checkpoint storage | Private S3 bucket |
 
+**Model artifacts**
+
+- [Checkpoint manifest](manifests/stage-a-torch-v10-hardv6-fallback/README.md)
+- Training and inference details: [Architecture](docs/ARCHITECTURE.md)
+
+Model weights (`.pt` and `.tar.gz`) are excluded from Git. The full training catalog and serving artifacts remain in private S3 storage.
+
+A separate GPU training job is active but is not part of the currently deployed checkpoint.
+
+## Repository
+
+```text
+compass/
+├── demo/           Local Flask demo
+├── serving/        HashBag inference and ranking
+├── scripts/        Training, data minting, quality gates
+├── data/           Public sample datasets
+├── docs/           Architecture and training specifications
+├── manifests/      Checkpoint documentation
+└── site/           Public demo interface
 ```
-utterance → (optional lexical retrieve) → candidates[]
-        → HashBag score → family conflict → top-k
-```
 
-Training uses **dynamic candidate pools** per example (gold + hard negatives from other families), never a fixed global tool list.
+The repository includes a stratified sample of approximately 10,000 tools and approximately 2,000 public routing trajectories. The full training catalog remains private.
 
-## Weights
+## Research notes
 
-`*.pt` / `*.tar.gz` are gitignored. Current serving weights:
+- **Dynamic candidates:** Rank the tools supplied for the current request.
+- **Hard negatives:** Train against confusing alternatives from other tool families.
+- **Lightweight inference:** Avoid an LLM agent loop for routine tool ranking.
+- **Family-conflict handling:** Reduce cross-domain mistakes, such as selecting email tools for social publishing.
 
-- Stage: **`stage-a-torch-v10-hardv6-fallback`** — see [manifests/stage-a-torch-v10-hardv6-fallback/README.md](manifests/stage-a-torch-v10-hardv6-fallback/README.md)
-- S3: `s3://amazon-sagemaker-530448593594-us-east-1-bewonmqz0j9mp3/jev-router/models/stage-a-torch-v10-hardv6-fallback/model.tar.gz`
-- Live SageMaker endpoint: `jev-router-ranker-v1` (serverless, config `jev-router-ranker-v10-srvless-cfg-202609281608`)
-
-## Repo layout
-
-```
-demo/           try-me Flask UI
-serving/        infer_torch HashBag load + rank
-scripts/        train / mint / quality gate (sanitized)
-data/           ~10k stratified catalog sample + ~2k trajectory sample (public; full train on S3)
-docs/           architecture + training IO
-manifests/      stage READMEs (large weights via S3 / Releases)
-```
+See [Training I/O](docs/TRAINING_IO.md) for the training data contract.
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+Apache-2.0. See [`LICENSE`](LICENSE).
 
 ## Credits
 
-Built for Admeasy Ai routing research. Brand: **Compass**. Internal codename was “Jev”.
+Built for Admeasy AI routing research.
+
+**Compass** is the public project name. *Jev* was the internal codename.
