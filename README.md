@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/compass-logo.png" alt="Compass" width="128" />
+</p>
+
 # Compass
 
 **Fast, lightweight ranking for dynamic MCP tool routing.**
