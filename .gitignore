@@ -10,3 +10,25 @@ data/*ledger*
 data/routing_trajectories*.jsonl
 !data/routing_trajectories_sample.jsonl
 data/ranker_rows*.jsonl
+
+# Public-repo guard. CI enforces the same paths on pushes and pull requests.
+# Already-tracked public samples stay in the index; these rules only stop
+# untracked additions. Model weights stay gitignored (*.pt, *.tar.gz) and are
+# published the existing way: manifests plus S3 or a GitHub Release asset.
+data/**
+exports/**
+logs/**
+!data/
+!exports/
+!logs/
+!data/routing_trajectories_sample.jsonl
+!data/tool_catalog_sample.jsonl
+
+# Dataset dump types. CI rejects force-added copies of these over 50 KB.
+*.jsonl
+*.parquet
+*.csv
+*.ndjson
+*.npy
+!data/routing_trajectories_sample.jsonl
+!data/tool_catalog_sample.jsonl
