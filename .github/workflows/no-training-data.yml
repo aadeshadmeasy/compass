@@ -1,0 +1,41 @@
+# Fail pushes and pull requests that add training dumps or log data.
+# Release assets are not part of this check. Checkpoint binaries stay on the
+# existing path: gitignored *.pt / *.tar.gz, documented under manifests/,
+# stored in S3 or attached to a GitHub Release.
+
+name: No training or log data
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  reject-training-and-log-data:
+    name: Reject training and log data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch pull request commits
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "pull/${{ github.event.pull_request.number }}/head"
+          git fetch --no-tags origin "${{ github.base_ref }}"
+
+      - name: Test the data guard
+        run: python3 scripts/test_check_no_training_data.py
+
+      - name: Fail on added training dumps or logs
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+        run: python3 scripts/check_no_training_data.py
